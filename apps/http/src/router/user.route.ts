@@ -56,16 +56,13 @@ router.post("/signin", async(req : Request , res : Response) => {
             where: {
                 email: parsedData.data.email
             },
-            include: {
-                password: true
-            }
         })
         if(!user){
             res.status(403).json({message: "User doesnot exists"})
             return;
         }
 
-        const isPasswordValid = await bcrypt.compare(parsedData.data.password , user.password?.hash as string);
+        const isPasswordValid = await bcrypt.compare(parsedData.data.password , user.password as string);
         if(!isPasswordValid){
             res.status(403).json({message : "Invalid crendentials"});
         }
@@ -95,10 +92,8 @@ router.get("/" , async(req : Request, res : Response) => {
                 id : userdId
             },
             select: {
-                firstName: true,
-                lastName: true,
+                name: true,
                 username: true,
-                workflows: true
             }
         })
         if(!user){

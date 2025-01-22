@@ -2,6 +2,7 @@ import express from "express"
 import cors from "cors"
 import dotenv from "dotenv"
 import { userRouter } from "./router/user.route"
+import { boardRouter } from "./router/board.route"
 
 dotenv.config()
 
@@ -16,6 +17,7 @@ app.use(cors({
 }))
 
 app.use('/api/v1/user', userRouter);
+app.use('/api/v1/board', boardRouter);
 
 app.listen(HTTP_PORT, () => {
     console.log(`HTTP server is running on port ${HTTP_PORT}`)
