@@ -22,13 +22,15 @@ model User {
   password   String
   createdAt  DateTime @default(now())
 
-  boards Board[]
+  boards      Board[]
+  boardEvents BoardEvent[]
 }
 
 model Board {
   id     String       @id @default(uuid())
   name   String
-  users  User[]
+  userId Int
+  user   User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   events BoardEvent[]
 
   createdAt DateTime @default(now())
@@ -37,8 +39,10 @@ model Board {
 model BoardEvent {
   id        String   @id @default(uuid())
   boardId   String
-  type      String // e.g., "draw", "erase"
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String // e.g., Circle , Sqaure
   data      Json
   timestamp DateTime @default(now())
-  board     Board    @relation(fields: [boardId], references: [id])
+  board     Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
 }
