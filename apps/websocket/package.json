@@ -8,11 +8,14 @@
     "dev": "tsc -b && node dist/index.js"
   },
   "dependencies": {
-    "@types/jsonwebtoken": "^9.0.7",
-    "@types/ws": "^8.5.13",
-    "db": "*",
     "dotenv": "^16.4.7",
     "jsonwebtoken": "^9.0.2",
     "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/ws": "^8.5.13",
+    "db": "*",
+    "nodemon": "^3.1.9"
   }
 }
