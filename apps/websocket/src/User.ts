@@ -32,6 +32,10 @@ export class User {
           case "draw":
             await this.handleDraw(parsedData.payload);
             break;
+          
+          case "erase":
+            await this.handleErase(parsedData.payload);
+            break;
 
           default:
             console.error("Unknown message type:", parsedData.type);
@@ -47,6 +51,7 @@ export class User {
     });
   }
 
+  /** User join case */
   private async handleJoin(payload: any) {
     const { token, boardId } = payload; 
     try {
@@ -78,13 +83,14 @@ export class User {
     }
   }
 
+  /** Draw case  */
   private async handleDraw(payload: any) {
     const { boardId, elementType, color, x, y } = payload;
     if(!elementType && !boardId && !color && !x && !y){
       return;
     };
 
-    try {
+    try { /** Create a new board event for the draw action */
       await prisma.boardEvent.create({
         data: {
           boardId, 
@@ -94,8 +100,8 @@ export class User {
         },
       });
 
-      const userCount = Room.getInstance().getUserCountInBoard(boardId)
-      if(userCount > 1){
+      /** If room has more than one member only then broadcast the event */
+      if (Room.getInstance().getUserCountInBoard(boardId) > 1){
         Room.getInstance().broadcast({
             type: 'draw',
             payload: {
@@ -112,6 +118,37 @@ export class User {
       }
     } catch (error) {
       console.error("Error creating board event:", error);
+    }
+  }
+
+  /** Erase the drawing */
+  private async handleErase(payload: any){
+    try {
+      const elementId = payload.elementId;
+
+      /** Delete a boardEvent (Draw) */
+      await prisma.boardEvent.delete({
+        where: {
+          id: elementId,
+          boardId: this.boardId
+        }
+      })
+
+      /** If room has more than one member only then broadcast the event */
+      console.log(this.boardId)
+      if (Room.getInstance().getUserCountInBoard(this.boardId as string) > 1){
+        Room.getInstance().broadcast({
+            type: 'erase',
+            payload: {
+              elementId,
+            }
+          },
+          this,
+          this.boardId as string
+        )
+      }
+    } catch (error) {
+      console.error("Error occured while erase" , error)
     }
   }
 
