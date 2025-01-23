@@ -1,5 +1,5 @@
 {
-  "name": "http",
+  "name": "httpserver",
   "version": "1.0.0",
   "main": "index.js",
   "license": "MIT",
@@ -19,8 +19,8 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
-    "db": "*",
     "@types/cors": "^2.8.17",
+    "db": "*",
     "express": "^4.21.2"
   }
 }
