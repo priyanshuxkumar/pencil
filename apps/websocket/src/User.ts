@@ -3,6 +3,7 @@ import jwt, { JwtPayload } from "jsonwebtoken";
 import prisma from "db";
 import { JWT_SECRET } from "./config/jwt.config";
 import { Room } from "./Room";
+import { publisher } from "./redis/publisher";
 
 export class User {
   private ws: WebSocket;
@@ -25,23 +26,32 @@ export class User {
         }
 
         switch (parsedData.type) {
-          case "join":
+          case "join": /** User join solo */
             await this.handleJoin(parsedData.payload);
             break;
+           
+          case "join-board": /** Collaboration */
+            await this.handleJoinBoard(parsedData.payload);
+            break;
 
-          case "draw":
+          case "draw": /** Draw events */
             await this.handleDraw(parsedData.payload);
             break;
           
-          case "erase":
+          case "erase": /** Erase events */
             await this.handleErase(parsedData.payload);
             break;
 
           default:
             console.error("Unknown message type:", parsedData.type);
         }
-      } catch (error) {
+      } catch (error : unknown) {
         console.error("Error processing message:", error);
+        if(error instanceof Error){
+          this.send(JSON.stringify({ type: 'error', message: error.message}));
+        }else {
+          this.send(JSON.stringify({ type: 'error', message: error}));
+        }
       }
     });
 
@@ -68,18 +78,80 @@ export class User {
       this.id = user.id;
       this.name = user.name;
 
-      const board = await prisma.board.findFirst({ where: { id: boardId } });
+      const board = await prisma.board.findFirst({ where: { id: boardId , userId: userId} });
       if (!board) {
-        throw new Error("Board not found.");
+        throw new Error("Board not found!");
       }
       this.boardId = board.id;
       this.board = board;
 
-      Room.getInstance().addUser(this.boardId, this);
-      console.log(`User ${this.name} joined board ${this.boardId}.`);
-    } catch (error) {
-      console.error("Error in handleJoin:", error);
+      this.send(JSON.stringify({ type: 'joined', message: "Board joined successfully!"}));
+      console.log(`User ${this.name} connected`);
+    } catch (error : unknown) {
+      if(error instanceof Error){
+        this.send(JSON.stringify({ type: 'error', message: error.message}));
+      }else {
+        this.send(JSON.stringify({ type: 'error', message: error}));
+      }
       this.ws.close();
+    }
+  }
+
+  private async handleJoinBoard(payload: any){
+    try {
+      const boardId = payload.boardId;
+      const token = payload.token;
+      
+      if(!boardId ){
+        throw new Error("Url is incorrect")
+      }
+      if(!token){
+        throw new Error("Unauthenticated!")
+      }
+
+      const userId = (jwt.verify(token, JWT_SECRET) as JwtPayload).id;
+      if (!userId) {
+        throw new Error("Invalid token.");
+      }
+
+      const user = await prisma.user.findFirst({ where: { id: userId }});
+      if (!user) {
+        throw new Error("User not found.");
+      }
+
+      this.id = user.id;
+      this.name = user.name;
+   
+      const board = await prisma.board.findFirst({
+        where: {
+          id : boardId
+        }
+      })
+
+      if(!board) {
+        throw new Error("Room not found");
+      }
+  
+      /** Join user to room */
+      Room.getInstance().addUser(boardId , this);
+      this.send(JSON.stringify({ type: 'board-room-joined', message: "Board joined successfully!"}));
+      
+
+      /**Broadcast new user joined */
+      Room.getInstance().broadcast({
+        type: "board-joined",
+        payload: {
+          name: this.name
+        }
+      }, this.id as number , boardId)
+      console.log(`User joined ${boardId} room`);
+    } catch (error : unknown) {
+      console.error("Error occured while joining room", error);
+      if(error instanceof Error){
+        this.send(JSON.stringify({ type: 'error', message: error.message}));
+      }else {
+        this.send(JSON.stringify({ type: 'error', message: error}));
+      }
     }
   }
 
@@ -102,22 +174,26 @@ export class User {
 
       /** If room has more than one member only then broadcast the event */
       if (Room.getInstance().getUserCountInBoard(boardId) > 1){
-        Room.getInstance().broadcast({
-            type: 'draw',
-            payload: {
-              elementType,
-              boardId,
-              color,
-              x,
-              y
-            }
+
+        publisher({
+          type: 'draw',
+          payload: {
+            elementType,
+            boardId,
+            color,
+            x,
+            y,
           },
-          this,
-          boardId
-        )
+          senderId: this.id as number
+        })
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error creating board event:", error);
+      if(error instanceof Error){
+        this.send(JSON.stringify({ type: 'error', message: error.message}));
+      }else {
+        this.send(JSON.stringify({ type: 'error', message: error}));
+      }
     }
   }
 
@@ -135,7 +211,6 @@ export class User {
       })
 
       /** If room has more than one member only then broadcast the event */
-      console.log(this.boardId)
       if (Room.getInstance().getUserCountInBoard(this.boardId as string) > 1){
         Room.getInstance().broadcast({
             type: 'erase',
@@ -143,7 +218,7 @@ export class User {
               elementId,
             }
           },
-          this,
+          this.id as number,
           this.boardId as string
         )
       }

@@ -38,18 +38,18 @@ export class Room {
     }
   }
 
-  public broadcast(message: any, sender: User, boardId: string): void {
+  public broadcast(message: any, senderId: number, boardId: string): void {
     if (!this.rooms.has(boardId)) {
       return;
     }
 
     this.rooms.get(boardId)?.forEach((x) => {
-      if (x.id !== sender.id) {
+      if (x.id !== senderId) {
         message = JSON.stringify(message)
         x.send(message);
       }
     });
-    console.log(`Message broadcasted to board ${boardId} by user ${sender.id}`);
+    console.log(`Message broadcasted to board ${boardId} by user ${senderId}`);
   }
 
   public getUsers(boardId: string): User[] {
