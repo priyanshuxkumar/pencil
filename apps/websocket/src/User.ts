@@ -1,6 +1,6 @@
 import { WebSocket } from "ws";
 import jwt, { JwtPayload } from "jsonwebtoken";
-import prisma from "db";
+import { prisma } from "db";
 import { JWT_SECRET } from "./config/jwt.config";
 import { Room } from "./Room";
 import { publisher } from "./redis/publisher";
