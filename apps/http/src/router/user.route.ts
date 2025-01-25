@@ -4,7 +4,10 @@ import jwt from "jsonwebtoken";
 
 import { JWT_SECRET } from "../config/jwt.config";
 import { UserSignInSchema, UserSignupSchema } from "../types";
-import prisma from "db";
+import { prisma } from "db";
+import { sendVerificationEmail } from "../services/email";
+import { redisClient } from "redis-client";
+import { authUserMiddleware } from "../middleware/user.middleware";
 
 
 const router = Router();
@@ -36,10 +39,20 @@ router.post("/signup", async(req : Request , res : Response) => {
 
             }
         })
+
+        await sendVerificationEmail(parsedData.data.email);
+
         res.status(200).json({message: "Please verify your email"})
-        return;
-    } catch (err) {
-        console.log("Error occured while signup", err); 
+    } catch (err : any) {
+        if(err.code === 'P2002'){
+            res.status(409).json({message : "Username already exists"});
+            return;
+        }else if (err.message.includes("email")) {
+            res.status(500).json({ message: "Failed to send verification email" });
+            return;
+        }else{
+            res.status(500).json({ message: "Unexpected error occured"});
+        }
     }
 })
 
@@ -64,7 +77,7 @@ router.post("/signin", async(req : Request , res : Response) => {
 
         const isPasswordValid = await bcrypt.compare(parsedData.data.password , user.password as string);
         if(!isPasswordValid){
-            res.status(403).json({message : "Invalid crendentials"});
+            res.status(401).json({message : "Invalid crendentials"});
         }
         const token = jwt.sign({id : user.id} , JWT_SECRET , {expiresIn: '24h'});
         const options = {
@@ -77,16 +90,23 @@ router.post("/signin", async(req : Request , res : Response) => {
         res.cookie("_token_", token, options);
         res.status(200).json({ message: "User logged in successfully", token});
     } catch (err) {
-        console.log("Error occured while signin", err); 
+        res.status(500).json({ message: "Unexpected error occured"});
     }
 })
 
-router.get("/" , async(req : Request, res : Response) => {
+router.get("/" , authUserMiddleware ,async(req : Request, res : Response) => {
     const userdId = req.id;
     if(!userdId){
-        return
-    }
+        res.status(403).json({message : "Unauthenticated"});
+        return;
+    } 
     try {
+        const cacheData =  await redisClient.get(`${userdId}-profile`);
+        if(cacheData){
+            res.status(200).json(JSON.parse(cacheData));
+            return;
+        }
+
         const user = await prisma.user.findFirst({
             where: {
                 id : userdId
@@ -100,10 +120,10 @@ router.get("/" , async(req : Request, res : Response) => {
             res.status(404).json({message : "User not found!"});
             return
         }
-
+        await redisClient.set(`${userdId}-profile`, JSON.stringify(user));
         res.status(200).json(user);
     } catch (err) {
-        console.log("Error occured while getting user data" , err);
+        res.status(500).json({ message: "Unexpected error occured"});
     }
 })
 
@@ -125,7 +145,7 @@ router.get("/verify-email", async(req : Request, res : Response) => {
         })
         res.status(200).json({message: "Email verified successfully!"});
     } catch (err) {
-        console.log("Error occured while verify user email" , err);
+        res.status(500).json({ message: "Unexpected error occured"});
     }
 })
 

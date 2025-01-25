@@ -15,3 +15,7 @@ export const UserSignInSchema = z.object({
     email : EmailSchema,
     password: z.string()
 })
+
+export const CreateBoardSchema = z.object({
+    name: z.string()
+})

@@ -1,15 +1,18 @@
-import express from "express"
-import cors from "cors"
-import dotenv from "dotenv"
-import { userRouter } from "./router/user.route"
-import { boardRouter } from "./router/board.route"
+import express from "express";
+import cors from "cors";
+import dotenv from "dotenv";
+import cookieParser from "cookie-parser";
+import { userRouter } from "./router/user.route";
+import { boardRouter } from "./router/board.route";
+
 
 dotenv.config()
 
-const app = express()
+const app = express();
 const HTTP_PORT = process.env.HTTP_PORT
 
-app.use(express.json())
+app.use(express.json());
+app.use(cookieParser());
 app.use(cors({
     origin: "http://localhost:3000",
     credentials: true,
