@@ -1,5 +1,6 @@
 import { createClient } from "redis";
 
+const redisClient = createClient();
 const redisPublisher = createClient(); 
 const redisSubscriber = createClient();
 
@@ -8,6 +9,9 @@ redisSubscriber.on("error", (err) => console.error("Redis Subscriber Error:", er
 
 async function connectRedisClients() {
   try {
+    await redisClient.connect();
+    console.log("Redis client connected");
+
     await redisPublisher.connect();
     console.log("Redis Publisher connected");
 
@@ -20,4 +24,4 @@ async function connectRedisClients() {
 
 connectRedisClients();
 
-export { redisPublisher, redisSubscriber };
+export { redisClient , redisPublisher, redisSubscriber };
