@@ -32,7 +32,7 @@ router.post('/' , authUserMiddleware , async (req : Request , res : Response) =>
             res.status(500).json({ message: "Unexpected error occured"});
         }
     }
-})
+});
 
 /** Fetch all boards */
 router.get('/' , authUserMiddleware , async(req: Request , res: Response) => {
@@ -53,7 +53,17 @@ router.get('/' , authUserMiddleware , async(req: Request , res: Response) => {
     } catch (error) {
         res.status(500).json({ message: "Unexpected error occured"});
     }
-})
+});
+
+router.get('/generate-collab-link' , async(req: Request , res: Response) => {
+    try {
+        const id = uuidv4();
+        const url = `${process.env.CLIENT_URL}?room=${id}`
+        res.status(200).json(url);
+    } catch (error) {
+        res.status(500).json({ message: "Unexpected error occured"});
+    }
+});
 
 /** Fetch a board */
 router.get('/:id', authUserMiddleware , async(req: Request , res: Response) => {
@@ -85,7 +95,7 @@ router.get('/:id', authUserMiddleware , async(req: Request , res: Response) => {
     } catch (error) {
         res.status(500).json({ message: "Unexpected error occured"});
     }
-})
+});
 
 router.delete('/:id', authUserMiddleware, async(req: Request , res: Response) => {
     const userId = req.id as number;
@@ -108,17 +118,6 @@ router.delete('/:id', authUserMiddleware, async(req: Request , res: Response) =>
             res.status(500).json({ message: "Unexpected error occured"});
         }
     }
-})
-
-router.get('/generate-collab-link' , async(req: Request , res: Response) => {
-    try {
-        const id = uuidv4();
-        const url = `${process.env.CLIENT_URL}?room=${id}`
-        res.status(200).json(url);
-    } catch (error) {
-        res.status(500).json({ message: "Unexpected error occured"});
-    }
-})
-
+});
 
 export const boardRouter = router
