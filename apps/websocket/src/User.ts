@@ -15,7 +15,7 @@ export class User {
   constructor(ws: WebSocket) {
     this.ws = ws;
     this.init(); 
-  }
+  };
 
   private init() {
     this.ws.on("message", async (data: any) => {
@@ -59,7 +59,7 @@ export class User {
       console.log(`User ${this.id} disconnected.`);
       Room.getInstance().removeUser(this, this.boardId || "");
     });
-  }
+  };
 
   /** User join case */
   private async handleJoin(payload: any) {
@@ -95,7 +95,7 @@ export class User {
       }
       this.ws.close();
     }
-  }
+  };
 
   private async handleJoinBoard(payload: any){
     try {
@@ -153,7 +153,7 @@ export class User {
         this.send(JSON.stringify({ type: 'error', message: error}));
       }
     }
-  }
+  };
 
   /** Draw case  */
   private async handleDraw(payload: any) {
@@ -195,7 +195,7 @@ export class User {
         this.send(JSON.stringify({ type: 'error', message: error}));
       }
     }
-  }
+  };
 
   /** Erase the drawing */
   private async handleErase(payload: any){
@@ -225,11 +225,26 @@ export class User {
     } catch (error) {
       console.error("Error occured while erase" , error)
     }
-  }
+  };
 
   send(message: string) {
     if (this.ws.readyState === WebSocket.OPEN) {
       this.ws.send(message);
     }
-  }
+  };
+
+  destory(){
+    //Check if user exist in board
+    if(Room.getInstance().isUserInBoard(this , this.boardId as string)){
+      Room.getInstance().removeUser(this , this.boardId as string); //Remove the user from board
+      
+      Room.getInstance().broadcast({ // broadcast on the board
+        type: "user-left",
+        payload: {
+          userId: this.id
+        }
+      }, this.id as number , this.boardId as string);
+    }
+    this.ws.close();
+  };
 }

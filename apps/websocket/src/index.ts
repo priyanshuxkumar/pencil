@@ -24,6 +24,7 @@ wss.on("connection", (ws: WebSocket) => {
   });
 
   ws.on("close", () => {
+    user?.destory();
     console.log("User disconnected from WS.");
   });
 });
